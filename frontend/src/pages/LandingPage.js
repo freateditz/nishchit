@@ -39,7 +39,7 @@ const LandingPage = () => {
               <a href="#about" className="text-gray-700 hover:text-blue-600 font-medium" data-testid="nav-about">About</a>
               <a href="#contact" className="text-gray-700 hover:text-blue-600 font-medium" data-testid="nav-contact">Contact</a>
               <Button 
-                onClick={() => navigate('/login')} 
+                onClick={() => navigate('/auth')} 
                 variant="outline" 
                 className="border-blue-600 text-blue-600 hover:bg-blue-50"
                 data-testid="nav-login-btn"
@@ -64,7 +64,7 @@ const LandingPage = () => {
             reduce corruption, and guarantee rations reach every eligible family
           </p>
           <Button 
-            onClick={() => navigate('/login')} 
+            onClick={() => navigate('/auth')} 
             size="lg" 
             className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-6 text-lg rounded-lg shadow-lg"
             data-testid="hero-get-started-btn"

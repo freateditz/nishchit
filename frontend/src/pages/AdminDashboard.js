@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../App';
-import { API } from '../App';
-import axios from 'axios';
 import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
 import { Shield, LogOut, Users, Package, CheckCircle, AlertCircle, TrendingUp } from 'lucide-react';
+import { getAnalytics, getRegionStats, mockComplaints, mockUsers, getMonthlyTrend } from '../data/mockData';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -13,57 +12,46 @@ const AdminDashboard = () => {
   const [analytics, setAnalytics] = useState(null);
   const [complaints, setComplaints] = useState([]);
   const [regionStats, setRegionStats] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [monthlyTrend, setMonthlyTrend] = useState([]);
 
   useEffect(() => {
-    fetchData();
+    setAnalytics(getAnalytics());
+    setRegionStats(getRegionStats());
+    setMonthlyTrend(getMonthlyTrend());
+    
+    const complaintsWithCitizen = mockComplaints.map(complaint => {
+      const citizen = mockUsers.find(u => u.id === complaint.citizen_id);
+      return {
+        ...complaint,
+        citizen_info: citizen ? { name: citizen.name, phone: citizen.phone, email: citizen.email } : null
+      };
+    });
+    setComplaints(complaintsWithCitizen);
   }, []);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [analyticsRes, complaintsRes, regionStatsRes] = await Promise.all([
-        axios.get(`${API}/admin/analytics`),
-        axios.get(`${API}/admin/complaints`),
-        axios.get(`${API}/admin/region-stats`)
-      ]);
-      
-      setAnalytics(analyticsRes.data);
-      setComplaints(complaintsRes.data.complaints);
-      setRegionStats(regionStatsRes.data.regions);
-    } catch (error) {
-      toast.error('Failed to load data');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleLogout = () => {
     logout();
     navigate('/');
   };
 
-  const handleResolveComplaint = async (complaintId) => {
-    try {
-      await axios.post(`${API}/admin/resolve-complaint/${complaintId}`);
-      toast.success('Complaint resolved successfully');
-      fetchData();
-    } catch (error) {
-      toast.error('Failed to resolve complaint');
-    }
+  const handleResolveComplaint = (complaintId) => {
+    const updatedComplaints = complaints.map(c => 
+      c.id === complaintId ? { ...c, status: 'resolved' } : c
+    );
+    setComplaints(updatedComplaints);
+    toast.success('Complaint resolved successfully');
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+  if (!analytics) {
+    return <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+    </div>;
   }
+
+  const maxMonthlyValue = Math.max(...monthlyTrend.map(m => m.delivered + m.pending));
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
       <nav className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -82,7 +70,6 @@ const AdminDashboard = () => {
         </div>
       </nav>
 
-      {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-8" data-testid="dashboard-heading">Admin Dashboard</h1>
 
@@ -93,7 +80,7 @@ const AdminDashboard = () => {
               <Users className="w-8 h-8 text-blue-600" />
             </div>
             <p className="text-sm text-gray-600 mb-1">Total Citizens</p>
-            <p className="text-3xl font-bold text-gray-900">{analytics?.total_citizens || 0}</p>
+            <p className="text-3xl font-bold text-gray-900">{analytics.totalCitizens}</p>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6" data-testid="card-dealers">
@@ -101,7 +88,7 @@ const AdminDashboard = () => {
               <Package className="w-8 h-8 text-blue-600" />
             </div>
             <p className="text-sm text-gray-600 mb-1">Total Dealers</p>
-            <p className="text-3xl font-bold text-gray-900">{analytics?.total_dealers || 0}</p>
+            <p className="text-3xl font-bold text-gray-900">{analytics.totalDealers}</p>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6" data-testid="card-delivery-rate">
@@ -109,7 +96,7 @@ const AdminDashboard = () => {
               <CheckCircle className="w-8 h-8 text-green-600" />
             </div>
             <p className="text-sm text-gray-600 mb-1">Delivery Rate</p>
-            <p className="text-3xl font-bold text-green-600">{analytics?.delivery_percentage || 0}%</p>
+            <p className="text-3xl font-bold text-green-600">{analytics.deliveryPercentage}%</p>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6" data-testid="card-complaints">
@@ -117,28 +104,48 @@ const AdminDashboard = () => {
               <AlertCircle className="w-8 h-8 text-red-600" />
             </div>
             <p className="text-sm text-gray-600 mb-1">Open Complaints</p>
-            <p className="text-3xl font-bold text-red-600">{analytics?.open_complaints || 0}</p>
+            <p className="text-3xl font-bold text-red-600">{analytics.openComplaints}</p>
           </div>
         </div>
 
-        {/* Performance Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6" data-testid="card-total-entitlements">
-            <p className="text-sm text-gray-600 mb-1">Total Entitlements</p>
-            <p className="text-2xl font-bold text-gray-900">{analytics?.total_entitlements || 0}</p>
-            <p className="text-sm text-gray-500 mt-1">This month</p>
+        {/* Monthly Trend Chart */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8" data-testid="monthly-trend-section">
+          <div className="flex items-center mb-6">
+            <TrendingUp className="w-6 h-6 text-blue-600 mr-2" />
+            <h2 className="text-xl font-bold text-gray-900">Monthly Delivery Trend</h2>
           </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6" data-testid="card-delivered">
-            <p className="text-sm text-gray-600 mb-1">Delivered</p>
-            <p className="text-2xl font-bold text-green-600">{analytics?.delivered || 0}</p>
-            <p className="text-sm text-gray-500 mt-1">Successfully completed</p>
+          <div className="flex items-end justify-between h-64 gap-4">
+            {monthlyTrend.map((month, index) => {
+              const deliveredHeight = (month.delivered / maxMonthlyValue) * 100;
+              const pendingHeight = (month.pending / maxMonthlyValue) * 100;
+              return (
+                <div key={index} className="flex-1 flex flex-col items-center">
+                  <div className="w-full flex flex-col items-center justify-end h-48 gap-1">
+                    <div 
+                      className="w-full bg-green-500 rounded-t transition-all duration-500"
+                      style={{ height: `${deliveredHeight}%` }}
+                      title={`Delivered: ${month.delivered}`}
+                    ></div>
+                    <div 
+                      className="w-full bg-red-400 rounded-t transition-all duration-500"
+                      style={{ height: `${pendingHeight}%` }}
+                      title={`Pending: ${month.pending}`}
+                    ></div>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-2 font-medium">{month.month}</p>
+                </div>
+              );
+            })}
           </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6" data-testid="card-pending">
-            <p className="text-sm text-gray-600 mb-1">Pending</p>
-            <p className="text-2xl font-bold text-red-600">{analytics?.pending || 0}</p>
-            <p className="text-sm text-gray-500 mt-1">Awaiting delivery</p>
+          <div className="flex justify-center gap-6 mt-6">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-green-500 rounded"></div>
+              <span className="text-sm text-gray-600">Delivered</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-red-400 rounded"></div>
+              <span className="text-sm text-gray-600">Pending</span>
+            </div>
           </div>
         </div>
 
@@ -203,11 +210,13 @@ const AdminDashboard = () => {
                     <div className="flex-1">
                       <h3 className="font-semibold text-gray-900">{complaint.subject}</h3>
                       <p className="text-sm text-gray-600 mt-1">{complaint.description}</p>
-                      <div className="mt-2 text-sm text-gray-500">
-                        <p>Submitted by: {complaint.citizen_info?.name}</p>
-                        <p>Contact: {complaint.citizen_info?.phone}</p>
-                        <p>Date: {new Date(complaint.created_at).toLocaleDateString('en-IN')}</p>
-                      </div>
+                      {complaint.citizen_info && (
+                        <div className="mt-2 text-sm text-gray-500">
+                          <p>Submitted by: {complaint.citizen_info.name}</p>
+                          <p>Contact: {complaint.citizen_info.phone}</p>
+                          <p>Date: {new Date(complaint.created_at).toLocaleDateString('en-IN')}</p>
+                        </div>
+                      )}
                     </div>
                     <div className="ml-4">
                       {complaint.status === 'open' ? (
