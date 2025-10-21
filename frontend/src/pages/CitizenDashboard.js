@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../App';
-import { API } from '../App';
-import axios from 'axios';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -10,6 +8,7 @@ import { Textarea } from '../components/ui/textarea';
 import { Progress } from '../components/ui/progress';
 import { toast } from 'sonner';
 import { Shield, LogOut, Package, CheckCircle, XCircle, MessageSquare } from 'lucide-react';
+import { getEntitlementByCitizen, getComplaintsByCitizen, mockEntitlements } from '../data/mockData';
 import {
   Dialog,
   DialogContent,
@@ -23,42 +22,25 @@ const CitizenDashboard = () => {
   const navigate = useNavigate();
   const { user, logout } = useContext(AuthContext);
   const [entitlement, setEntitlement] = useState(null);
-  const [status, setStatus] = useState(null);
   const [complaints, setComplaints] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [complaintSubject, setComplaintSubject] = useState('');
   const [complaintDescription, setComplaintDescription] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [entitlementRes, statusRes, complaintsRes] = await Promise.all([
-        axios.get(`${API}/citizen/entitlement`),
-        axios.get(`${API}/citizen/status`),
-        axios.get(`${API}/citizen/complaints`)
-      ]);
-      
-      setEntitlement(entitlementRes.data);
-      setStatus(statusRes.data);
-      setComplaints(complaintsRes.data.complaints);
-    } catch (error) {
-      toast.error('Failed to load data');
-    } finally {
-      setLoading(false);
+    if (user) {
+      const userEntitlement = getEntitlementByCitizen(user.id);
+      setEntitlement(userEntitlement);
+      setComplaints(getComplaintsByCitizen(user.id));
     }
-  };
+  }, [user]);
 
   const handleLogout = () => {
     logout();
     navigate('/');
   };
 
-  const handleSubmitComplaint = async (e) => {
+  const handleSubmitComplaint = (e) => {
     e.preventDefault();
     
     if (!complaintSubject || !complaintDescription) {
@@ -66,37 +48,40 @@ const CitizenDashboard = () => {
       return;
     }
 
-    try {
-      await axios.post(`${API}/citizen/complaint`, {
-        subject: complaintSubject,
-        description: complaintDescription
-      });
-      
-      toast.success('Complaint submitted successfully');
-      setComplaintSubject('');
-      setComplaintDescription('');
-      setDialogOpen(false);
-      fetchData();
-    } catch (error) {
-      toast.error('Failed to submit complaint');
-    }
+    const newComplaint = {
+      id: 'comp_' + Date.now(),
+      citizen_id: user.id,
+      subject: complaintSubject,
+      description: complaintDescription,
+      status: 'open',
+      created_at: new Date().toISOString()
+    };
+    
+    setComplaints([newComplaint, ...complaints]);
+    toast.success('Complaint submitted successfully');
+    setComplaintSubject('');
+    setComplaintDescription('');
+    setDialogOpen(false);
   };
 
-  if (loading) {
+  if (!entitlement) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="text-center">
+          <p className="text-gray-600 mb-4">No entitlement found for your account.</p>
+          <Button onClick={() => navigate('/')}>Go to Home</Button>
+        </div>
       </div>
     );
   }
 
-  const deliveredCount = status?.entitlements.filter(e => e.status === 'delivered').length || 0;
-  const totalCount = status?.entitlements.length || 1;
+  const allEntitlements = mockEntitlements.filter(e => e.citizen_id === user.id);
+  const deliveredCount = allEntitlements.filter(e => e.status === 'delivered').length;
+  const totalCount = allEntitlements.length || 1;
   const deliveryPercentage = (deliveredCount / totalCount) * 100;
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
       <nav className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -115,7 +100,6 @@ const CitizenDashboard = () => {
         </div>
       </nav>
 
-      {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-8" data-testid="dashboard-heading">Citizen Dashboard</h1>
 
@@ -125,7 +109,7 @@ const CitizenDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Ration Card Number</p>
-                <p className="text-2xl font-bold text-gray-900">{entitlement?.ration_card_number}</p>
+                <p className="text-2xl font-bold text-gray-900">{entitlement.ration_card_number}</p>
               </div>
               <Package className="w-10 h-10 text-blue-600" />
             </div>
@@ -135,11 +119,11 @@ const CitizenDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Current Status</p>
-                <p className={`text-2xl font-bold ${entitlement?.status === 'delivered' ? 'text-green-600' : 'text-red-600'}`}>
-                  {entitlement?.status === 'delivered' ? 'Delivered' : 'Pending'}
+                <p className={`text-2xl font-bold ${entitlement.status === 'delivered' ? 'text-green-600' : 'text-red-600'}`}>
+                  {entitlement.status === 'delivered' ? 'Delivered' : 'Pending'}
                 </p>
               </div>
-              {entitlement?.status === 'delivered' ? (
+              {entitlement.status === 'delivered' ? (
                 <CheckCircle className="w-10 h-10 text-green-600" />
               ) : (
                 <XCircle className="w-10 h-10 text-red-600" />
@@ -159,7 +143,7 @@ const CitizenDashboard = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8" data-testid="entitlement-section">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Monthly Entitlement</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {entitlement?.items && Object.entries(entitlement.items).map(([item, qty]) => (
+            {entitlement.items && Object.entries(entitlement.items).map(([item, qty]) => (
               <div key={item} className="p-4 bg-blue-50 rounded-lg border border-blue-200" data-testid={`item-${item}`}>
                 <p className="text-sm text-gray-600 capitalize">{item}</p>
                 <p className="text-2xl font-bold text-blue-900">{qty} kg</p>
@@ -187,7 +171,7 @@ const CitizenDashboard = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8" data-testid="history-section">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Status History</h2>
           <div className="space-y-3">
-            {status?.entitlements.map((ent, index) => (
+            {allEntitlements.map((ent, index) => (
               <div key={ent.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg" data-testid={`history-item-${index}`}>
                 <div className="flex items-center space-x-3">
                   {ent.status === 'delivered' ? (
@@ -197,7 +181,7 @@ const CitizenDashboard = () => {
                   )}
                   <div>
                     <p className="font-medium text-gray-900">
-                      {new Date(ent.created_at).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+                      Month {ent.month}, {ent.year}
                     </p>
                     <p className="text-sm text-gray-600">{ent.ration_card_number}</p>
                   </div>

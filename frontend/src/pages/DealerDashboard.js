@@ -1,14 +1,11 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../App';
-import { API } from '../App';
-import axios from 'axios';
 import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { toast } from 'sonner';
-import { Shield, LogOut, Package, CheckCircle, Clock, Users } from 'lucide-react';
+import { Shield, LogOut, CheckCircle, Clock, Users } from 'lucide-react';
+import { getBeneficiariesByRegion } from '../data/mockData';
 import {
   Dialog,
   DialogContent,
@@ -22,82 +19,46 @@ const DealerDashboard = () => {
   const navigate = useNavigate();
   const { user, logout } = useContext(AuthContext);
   const [beneficiaries, setBeneficiaries] = useState([]);
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [selectedEntitlement, setSelectedEntitlement] = useState(null);
-  const [proofImage, setProofImage] = useState('');
   const [remarks, setRemarks] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [beneficiariesRes, statsRes] = await Promise.all([
-        axios.get(`${API}/dealer/assigned-beneficiaries`),
-        axios.get(`${API}/dealer/stats`)
-      ]);
-      
-      setBeneficiaries(beneficiariesRes.data.beneficiaries);
-      setStats(statsRes.data);
-    } catch (error) {
-      toast.error('Failed to load data');
-    } finally {
-      setLoading(false);
+    if (user) {
+      const data = getBeneficiariesByRegion(user.region);
+      setBeneficiaries(data);
     }
-  };
+  }, [user]);
 
   const handleLogout = () => {
     logout();
     navigate('/');
   };
 
-  const handleMarkDelivery = async (e) => {
+  const handleMarkDelivery = (e) => {
     e.preventDefault();
     
-    try {
-      await axios.post(`${API}/dealer/mark-delivery`, {
-        entitlement_id: selectedEntitlement.id,
-        proof: proofImage || null,
-        remarks: remarks || null
-      });
-      
-      toast.success('Delivery marked successfully');
-      setProofImage('');
-      setRemarks('');
-      setDialogOpen(false);
-      setSelectedEntitlement(null);
-      fetchData();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to mark delivery');
-    }
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProofImage(reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
+    const updatedBeneficiaries = beneficiaries.map(b => 
+      b.id === selectedEntitlement.id 
+        ? { ...b, status: 'delivered', delivery_info: { status: 'delivered', remarks } }
+        : b
     );
-  }
+    
+    setBeneficiaries(updatedBeneficiaries);
+    toast.success('Delivery marked successfully');
+    setRemarks('');
+    setDialogOpen(false);
+    setSelectedEntitlement(null);
+  };
+
+  const stats = {
+    total: beneficiaries.length,
+    delivered: beneficiaries.filter(b => b.status === 'delivered').length,
+    pending: beneficiaries.filter(b => b.status === 'pending').length
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
       <nav className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -116,7 +77,6 @@ const DealerDashboard = () => {
         </div>
       </nav>
 
-      {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-8" data-testid="dashboard-heading">Dealer Dashboard</h1>
 
@@ -126,7 +86,7 @@ const DealerDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Total Assigned</p>
-                <p className="text-3xl font-bold text-gray-900">{stats?.total_assigned || 0}</p>
+                <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
               </div>
               <Users className="w-10 h-10 text-blue-600" />
             </div>
@@ -136,7 +96,7 @@ const DealerDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Delivered</p>
-                <p className="text-3xl font-bold text-green-600">{stats?.delivered || 0}</p>
+                <p className="text-3xl font-bold text-green-600">{stats.delivered}</p>
               </div>
               <CheckCircle className="w-10 h-10 text-green-600" />
             </div>
@@ -146,7 +106,7 @@ const DealerDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Pending</p>
-                <p className="text-3xl font-bold text-red-600">{stats?.pending || 0}</p>
+                <p className="text-3xl font-bold text-red-600">{stats.pending}</p>
               </div>
               <Clock className="w-10 h-10 text-red-600" />
             </div>
@@ -214,22 +174,10 @@ const DealerDashboard = () => {
                               </DialogHeader>
                               <form onSubmit={handleMarkDelivery} className="space-y-4">
                                 <div>
-                                  <Label htmlFor="proof">Upload Proof (Optional)</Label>
-                                  <Input
-                                    id="proof"
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handleFileChange}
-                                    data-testid="proof-upload-input"
-                                  />
-                                </div>
-                                <div>
-                                  <Label htmlFor="remarks">Remarks (Optional)</Label>
                                   <Textarea
-                                    id="remarks"
                                     value={remarks}
                                     onChange={(e) => setRemarks(e.target.value)}
-                                    placeholder="Any additional notes"
+                                    placeholder="Add remarks (optional)"
                                     rows={3}
                                     data-testid="remarks-input"
                                   />
