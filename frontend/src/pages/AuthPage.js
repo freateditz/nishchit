@@ -1,12 +1,12 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../App';
-import { getUserByEmail } from '../data/mockData';
+import { getUserByEmail, mockUsers } from '../data/mockData';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { toast } from 'sonner';
-import { Shield, ArrowLeft } from 'lucide-react';
+import { Shield, ArrowLeft, User, Package, UserCog } from 'lucide-react';
 
 const AuthPage = () => {
   const navigate = useNavigate();
@@ -17,7 +17,6 @@ const AuthPage = () => {
     password: '',
     name: '',
     phone: '',
-    aadhaar: '',
     region: 'North Delhi'
   });
   const [loading, setLoading] = useState(false);
@@ -28,7 +27,6 @@ const AuthPage = () => {
 
     try {
       if (isLogin) {
-        // Login
         const user = getUserByEmail(formData.email, formData.password);
         if (user) {
           login(user);
@@ -38,8 +36,7 @@ const AuthPage = () => {
           toast.error('Invalid credentials');
         }
       } else {
-        // Signup
-        if (!formData.name || !formData.email || !formData.password || !formData.phone || !formData.aadhaar) {
+        if (!formData.name || !formData.email || !formData.password || !formData.phone) {
           toast.error('Please fill all fields');
           return;
         }
@@ -49,7 +46,6 @@ const AuthPage = () => {
           email: formData.email,
           password: formData.password,
           phone: formData.phone,
-          aadhaar: formData.aadhaar,
           region: formData.region
         });
         
@@ -63,6 +59,15 @@ const AuthPage = () => {
     }
   };
 
+  const handleQuickLogin = (role) => {
+    const user = mockUsers.find(u => u.role === role);
+    if (user) {
+      login(user);
+      toast.success(`Logged in as ${role}!`);
+      navigate('/dashboard');
+    }
+  };
+
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -71,7 +76,7 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
         <button
           onClick={() => navigate('/')}
@@ -122,21 +127,6 @@ const AuthPage = () => {
                     placeholder="10-digit mobile number"
                     className="mt-2 border-gray-300"
                     data-testid="phone-input"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="aadhaar" className="text-gray-700 font-medium">Aadhaar Number</Label>
-                  <Input
-                    id="aadhaar"
-                    name="aadhaar"
-                    type="text"
-                    value={formData.aadhaar}
-                    onChange={handleChange}
-                    placeholder="12-digit Aadhaar number"
-                    maxLength={12}
-                    className="mt-2 border-gray-300"
-                    data-testid="aadhaar-input"
                   />
                 </div>
 
@@ -206,6 +196,39 @@ const AuthPage = () => {
             >
               {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Login'}
             </button>
+          </div>
+
+          {/* Quick Login Section */}
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <p className="text-sm text-gray-600 text-center mb-4 font-medium">Quick Demo Login</p>
+            <div className="grid grid-cols-3 gap-3">
+              <button
+                onClick={() => handleQuickLogin('citizen')}
+                className="flex flex-col items-center justify-center p-4 border-2 border-blue-200 rounded-lg hover:bg-blue-50 hover:border-blue-400 transition-all"
+                data-testid="quick-login-citizen"
+              >
+                <User className="w-8 h-8 text-blue-600 mb-2" />
+                <span className="text-sm font-medium text-gray-700">Citizen</span>
+              </button>
+
+              <button
+                onClick={() => handleQuickLogin('dealer')}
+                className="flex flex-col items-center justify-center p-4 border-2 border-green-200 rounded-lg hover:bg-green-50 hover:border-green-400 transition-all"
+                data-testid="quick-login-dealer"
+              >
+                <Package className="w-8 h-8 text-green-600 mb-2" />
+                <span className="text-sm font-medium text-gray-700">Dealer</span>
+              </button>
+
+              <button
+                onClick={() => handleQuickLogin('admin')}
+                className="flex flex-col items-center justify-center p-4 border-2 border-purple-200 rounded-lg hover:bg-purple-50 hover:border-purple-400 transition-all"
+                data-testid="quick-login-admin"
+              >
+                <UserCog className="w-8 h-8 text-purple-600 mb-2" />
+                <span className="text-sm font-medium text-gray-700">Admin</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

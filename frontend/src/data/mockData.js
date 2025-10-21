@@ -1,12 +1,12 @@
 export const mockUsers = [
-  {id: 'citizen1', email: 'rajesh@example.com', password: 'password123', aadhaar: '123456789012', name: 'Rajesh Kumar', phone: '9876543210', role: 'citizen', region: 'North Delhi'},
-  {id: 'citizen2', email: 'priya@example.com', password: 'password123', aadhaar: '234567890123', name: 'Priya Singh', phone: '9876543211', role: 'citizen', region: 'South Delhi'},
-  {id: 'citizen3', email: 'amit@example.com', password: 'password123', aadhaar: '345678901234', name: 'Amit Sharma', phone: '9876543212', role: 'citizen', region: 'East Delhi'},
-  {id: 'citizen4', email: 'sunita@example.com', password: 'password123', aadhaar: '456789012345', name: 'Sunita Devi', phone: '9876543213', role: 'citizen', region: 'West Delhi'},
-  {id: 'citizen5', email: 'ramesh@example.com', password: 'password123', aadhaar: '567890123456', name: 'Ramesh Yadav', phone: '9876543214', role: 'citizen', region: 'Central Delhi'},
-  {id: 'dealer1', email: 'dealer1@example.com', password: 'dealer123', aadhaar: '678901234567', name: 'Manoj Verma', phone: '9876543215', role: 'dealer', region: 'North Delhi'},
-  {id: 'dealer2', email: 'dealer2@example.com', password: 'dealer123', aadhaar: '789012345678', name: 'Sanjay Gupta', phone: '9876543216', role: 'dealer', region: 'South Delhi'},
-  {id: 'admin1', email: 'admin@example.com', password: 'admin123', aadhaar: '890123456789', name: 'Admin User', phone: '9876543217', role: 'admin', region: 'All Delhi'},
+  {id: 'citizen1', email: 'rajesh@example.com', password: 'password123', name: 'Rajesh Kumar', phone: '9876543210', role: 'citizen', region: 'North Delhi'},
+  {id: 'citizen2', email: 'priya@example.com', password: 'password123', name: 'Priya Singh', phone: '9876543211', role: 'citizen', region: 'South Delhi'},
+  {id: 'citizen3', email: 'amit@example.com', password: 'password123', name: 'Amit Sharma', phone: '9876543212', role: 'citizen', region: 'East Delhi'},
+  {id: 'citizen4', email: 'sunita@example.com', password: 'password123', name: 'Sunita Devi', phone: '9876543213', role: 'citizen', region: 'West Delhi'},
+  {id: 'citizen5', email: 'ramesh@example.com', password: 'password123', name: 'Ramesh Yadav', phone: '9876543214', role: 'citizen', region: 'Central Delhi'},
+  {id: 'dealer1', email: 'dealer1@example.com', password: 'dealer123', name: 'Manoj Verma', phone: '9876543215', role: 'dealer', region: 'North Delhi'},
+  {id: 'dealer2', email: 'dealer2@example.com', password: 'dealer123', name: 'Sanjay Gupta', phone: '9876543216', role: 'dealer', region: 'South Delhi'},
+  {id: 'admin1', email: 'admin@example.com', password: 'admin123', name: 'Admin User', phone: '9876543217', role: 'admin', region: 'All Delhi'},
 ];
 
 export const mockEntitlements = [
